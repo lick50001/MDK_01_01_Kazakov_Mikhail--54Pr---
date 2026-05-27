@@ -15,170 +15,142 @@ namespace Perm_Dynamics.Pages
     /// </summary>
     public partial class Chart : Page
     {
+        public MainWindow mainWindow;
+
         public double actualHeightCanvas = 0;
         public double maxValue = 0;
-        public double averageValue = 0;
+        double averageValue = 0;
 
-        public MainWindow mainWindow;
-        public DispatcherTimer dispatcherTimer;
+        private Line _averageLine;
+
+        public DispatcherTimer dispatcherTimer = new DispatcherTimer();
 
         public Chart(MainWindow mainWindow)
         {
             InitializeComponent();
-
             this.mainWindow = mainWindow;
+            actualHeightCanvas = mainWindow.Height - 50d;
 
-            dispatcherTimer = new DispatcherTimer();
             dispatcherTimer.Interval = new TimeSpan(0, 0, 2);
             dispatcherTimer.Tick += CreateNewValue;
-
-            actualHeightCanvas = this.ActualHeight > 0 ? this.ActualHeight - 50 : 300;
-
-            if (mainWindow.pointInfos == null)
-                mainWindow.pointInfos = new List<PointInfo>();
-
-            if (mainWindow.pointInfos.Count == 0)
-            {
-                double startValue = mainWindow.InitialStockValue > 0 ? mainWindow.InitialStockValue : 100;
-                mainWindow.pointInfos.Add(new PointInfo(startValue));
-            }
-
             dispatcherTimer.Start();
 
-            ControlCreateChart();
+            CreateChart();
+            ColorChart();
         }
 
-        public void CreateNewValue(object sender, EventArgs e)
+        private void CreateNewValue(object sender, EventArgs e)
         {
             Random random = new Random();
 
-            double lastValue = mainWindow.pointInfos[mainWindow.pointInfos.Count - 1].value;
-
-            double coefficient = 0.5 + random.NextDouble();
-            double newValue = lastValue * coefficient;
-
-            mainWindow.pointInfos.Add(new PointInfo(newValue));
+            double value = mainWindow.pointInfo[mainWindow.pointInfo.Count - 1].value;
+            double newValue = value * (random.NextDouble() + 0.5d);
+            mainWindow.pointInfo.Add(new Classes.PointInfo(newValue));
 
             ControlCreateChart();
         }
 
         public void CreateChart()
         {
-            _canvas.Children.Clear();
+            canvas.Children.Clear();
 
-            maxValue = 0;
-            foreach (var point in mainWindow.pointInfos)
+            for (int i = 0; i < mainWindow.pointInfo.Count; i++)
             {
-                if (point.value > maxValue)
-                {
-                    maxValue = point.value;
-                }
+                if (mainWindow.pointInfo[i].value > maxValue)
+                    maxValue = mainWindow.pointInfo[i].value;
             }
-
-            if (mainWindow.pointInfos.Count > 0)
-            {
-                averageValue = mainWindow.pointInfos.Average(p => p.value);
-            }
-
-            for (int i = 0; i < mainWindow.pointInfos.Count; i++)
+            for (int i = 0; i < mainWindow.pointInfo.Count; i++)
             {
                 Line line = new Line();
-
                 line.X1 = i * 20;
                 line.X2 = (i + 1) * 20;
 
                 if (i == 0)
                 {
-                    line.Y1 = actualHeightCanvas - ((mainWindow.pointInfos[i].value / maxValue) * actualHeightCanvas);
-                    line.Y2 = line.Y1;
+                    line.Y1 = actualHeightCanvas;
                 }
                 else
                 {
-                    line.Y1 = actualHeightCanvas - ((mainWindow.pointInfos[i - 1].value / maxValue) * actualHeightCanvas);
-                    line.Y2 = actualHeightCanvas - ((mainWindow.pointInfos[i].value / maxValue) * actualHeightCanvas);
+                    line.Y1 = actualHeightCanvas - ((mainWindow.pointInfo[(i - 1)].value / maxValue) * actualHeightCanvas);
                 }
-
+                line.Y2 = actualHeightCanvas - ((mainWindow.pointInfo[i].value / maxValue) * actualHeightCanvas);
                 line.StrokeThickness = 2;
+                mainWindow.pointInfo[i].line = line;
 
-                mainWindow.pointInfos[i].line = line;
-
-                _canvas.Children.Add(line);
+                canvas.Children.Add(line);
             }
         }
 
         public void CreatePoint()
         {
-            int count = mainWindow.pointInfos.Count;
-            if (count < 2) return;
-
             Line line = new Line();
-
-            int prevIndex = count - 2;
-            int currIndex = count - 1;
-
-            line.X1 = prevIndex * 20;
-            line.X2 = currIndex * 20;
-
-            line.Y1 = actualHeightCanvas - ((mainWindow.pointInfos[prevIndex].value / maxValue) * actualHeightCanvas);
-            line.Y2 = actualHeightCanvas - ((mainWindow.pointInfos[currIndex].value / maxValue) * actualHeightCanvas);
-
+            line.X1 = (mainWindow.pointInfo.Count - 1) * 20;
+            line.X2 = mainWindow.pointInfo.Count * 20;
+            line.Y1 = actualHeightCanvas - ((mainWindow.pointInfo[(mainWindow.pointInfo.Count - 2)].value / maxValue) * actualHeightCanvas);
+            line.Y2 = actualHeightCanvas - ((mainWindow.pointInfo[(mainWindow.pointInfo.Count - 1)].value / maxValue) * actualHeightCanvas);
             line.StrokeThickness = 2;
-
-            mainWindow.pointInfos[currIndex].line = line;
-            _canvas.Children.Add(line);
-        }
-
-        public void ControlCreateChart()
-        {
-            double currentValue = mainWindow.pointInfos[mainWindow.pointInfos.Count - 1].value;
-
-            if (currentValue > maxValue)
-            {
-                CreateChart();
-            }
-            else
-            {
-                CreatePoint();
-            }
-
-            ColorChart();
+            mainWindow.pointInfo[(mainWindow.pointInfo.Count - 1)].line = line;
+            canvas.Children.Add(line);
         }
 
         public void ColorChart()
         {
-            double currentValue = mainWindow.pointInfos[mainWindow.pointInfos.Count - 1].value;
+            double value = mainWindow.pointInfo[mainWindow.pointInfo.Count - 1].value;
 
-            averageValue = mainWindow.pointInfos.Average(p => p.value);
-
-            for (int i = 0; i < mainWindow.pointInfos.Count; i++)
+            for (int i = 0; i < mainWindow.pointInfo.Count; i++)
             {
-                var point = mainWindow.pointInfos[i];
-                if (point.line != null)
+                averageValue += mainWindow.pointInfo[i].value;
+            }
+            averageValue = averageValue / mainWindow.pointInfo.Count;
+
+            for (int i = 0; i < mainWindow.pointInfo.Count; i++)
+            {
+                if (value < averageValue)
                 {
-                    if (point.value < averageValue)
-                    {
-                        point.line.Stroke = Brushes.Red;
-                    }
-                    else
-                    {
-                        point.line.Stroke = Brushes.Green;
-                    }
+                    mainWindow.pointInfo[i].line.Stroke = Brushes.Red;
+                }
+                else
+                {
+                    mainWindow.pointInfo[i].line.Stroke = Brushes.Green;
                 }
             }
-            _canvas.Width = mainWindow.pointInfos.Count * 20 + 50;
 
-            _scroll.ScrollToHorizontalOffset(_canvas.Width);
+            if (_averageLine != null)
+                canvas.Children.Remove(_averageLine);
 
-            if (current_value != null)
-                current_value.Content = "Тек. знач: " + Math.Round(currentValue, 2);
+            double averageY = actualHeightCanvas - ((averageValue / maxValue) * actualHeightCanvas);
+            _averageLine = new Line();
+            _averageLine.X1 = 0;
+            _averageLine.X2 = mainWindow.pointInfo.Count * 20;
+            _averageLine.Y1 = averageY;
+            _averageLine.Y2 = averageY;
+            _averageLine.Stroke = Brushes.Blue;
+            _averageLine.StrokeThickness = 2;
+            canvas.Children.Add(_averageLine);
 
-            if (average_value != null)
-                average_value.Content = "Сред. знач: " + Math.Round(averageValue, 2);
+            canvas.Width = mainWindow.pointInfo.Count * 20 + 300;
+            scroll.ScrollToHorizontalOffset(canvas.Width);
+
+            current_value.Content = "Тек. знач: " + Math.Round(value, 2);
+            average_value.Content = "Сред. знач: " + Math.Round(averageValue, 2);
         }
 
-        public void Page_SizeChanged(object sender, SizeChangedEventArgs e)
+        public void ControlCreateChart()
         {
-            actualHeightCanvas = this.ActualHeight - 50d;
+            double value = mainWindow.pointInfo[mainWindow.pointInfo.Count - 1].value;
+
+            if (value < maxValue)
+                CreatePoint();
+            else
+                CreateChart();
+
+            ColorChart();
+        }
+
+        private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            actualHeightCanvas = mainWindow.Height - 50d;
+
             CreateChart();
             ColorChart();
         }

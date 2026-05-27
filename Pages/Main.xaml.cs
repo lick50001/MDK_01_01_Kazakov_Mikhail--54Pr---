@@ -20,17 +20,18 @@ namespace Perm_Dynamics.Pages
     /// </summary>
     public partial class Main : Page
     {
-        private MainWindow mainWindow;
+        public MainWindow mainWindow;
+
         public Main(MainWindow mainWindow)
         {
             InitializeComponent();
             this.mainWindow = mainWindow;
         }
 
-        public void OpenPageChart(object sender, RoutedEventArgs e)
+        private void OpenPageChart(object sender, RoutedEventArgs e)
         {
-            float value = Convert.ToInt32(tb_value.Text);
-            mainWindow.pointInfos.Add(new Classes.PointInfo(value));
+            float value = Convert.ToInt32(tbValue.Text);
+            mainWindow.pointInfo.Add(new Classes.PointInfo(value));
             mainWindow.OpenPages(MainWindow.pages.chart);
         }
     }
