@@ -1,18 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using Perm_Dynamics.Classes;
 
 namespace Perm_Dynamics.Pages
 {
@@ -23,102 +17,168 @@ namespace Perm_Dynamics.Pages
     {
         public double actualHeightCanvas = 0;
         public double maxValue = 0;
-        double averageValue = 0;
+        public double averageValue = 0;
 
         public MainWindow mainWindow;
-
         public DispatcherTimer dispatcherTimer;
+
         public Chart(MainWindow mainWindow)
         {
             InitializeComponent();
-            this.mainWindow = mainWindow;
-            actualHeightCanvas = mainWindow.Height - 50d;
 
+            this.mainWindow = mainWindow;
+
+            dispatcherTimer = new DispatcherTimer();
             dispatcherTimer.Interval = new TimeSpan(0, 0, 2);
             dispatcherTimer.Tick += CreateNewValue;
+
+            actualHeightCanvas = this.ActualHeight > 0 ? this.ActualHeight - 50 : 300;
+
+            if (mainWindow.pointInfos == null)
+                mainWindow.pointInfos = new List<PointInfo>();
+
+            if (mainWindow.pointInfos.Count == 0)
+            {
+                double startValue = mainWindow.InitialStockValue > 0 ? mainWindow.InitialStockValue : 100;
+                mainWindow.pointInfos.Add(new PointInfo(startValue));
+            }
+
             dispatcherTimer.Start();
+
+            ControlCreateChart();
         }
 
         public void CreateNewValue(object sender, EventArgs e)
         {
             Random random = new Random();
-            double value = mainWindow.pointInfos[mainWindow.pointInfos.Count - 1].value;
-            double newValue = value * (random.NextDouble() + 0.5d);
-            mainWindow.pointInfos.Add(new Classes.PointInfo(newValue));
+
+            double lastValue = mainWindow.pointInfos[mainWindow.pointInfos.Count - 1].value;
+
+            double coefficient = 0.5 + random.NextDouble();
+            double newValue = lastValue * coefficient;
+
+            mainWindow.pointInfos.Add(new PointInfo(newValue));
+
             ControlCreateChart();
         }
 
         public void CreateChart()
         {
             _canvas.Children.Clear();
-            for (int i = 0; i < mainWindow.pointInfos.Count; i++)
+
+            maxValue = 0;
+            foreach (var point in mainWindow.pointInfos)
             {
-                if (mainWindow.pointInfos[i].value > maxValue)
+                if (point.value > maxValue)
                 {
-                    maxValue = mainWindow.pointInfos[i].value;
+                    maxValue = point.value;
                 }
             }
-            for (int i = 0;i < mainWindow.pointInfos.Count;i++)
+
+            if (mainWindow.pointInfos.Count > 0)
+            {
+                averageValue = mainWindow.pointInfos.Average(p => p.value);
+            }
+
+            for (int i = 0; i < mainWindow.pointInfos.Count; i++)
             {
                 Line line = new Line();
+
                 line.X1 = i * 20;
-                line.X2 = (i +1) * 20;
+                line.X2 = (i + 1) * 20;
+
                 if (i == 0)
                 {
-                    line.Y1 = actualHeightCanvas;
-                }else
-                    line.Y1 = actualHeightCanvas - ((mainWindow.pointInfos[(i - 1)].value / double.MaxValue) * actualHeightCanvas);
-                line.Y2 = actualHeightCanvas - ((mainWindow.pointInfos[i].value / maxValue) * actualHeightCanvas);
+                    line.Y1 = actualHeightCanvas - ((mainWindow.pointInfos[i].value / maxValue) * actualHeightCanvas);
+                    line.Y2 = line.Y1;
+                }
+                else
+                {
+                    line.Y1 = actualHeightCanvas - ((mainWindow.pointInfos[i - 1].value / maxValue) * actualHeightCanvas);
+                    line.Y2 = actualHeightCanvas - ((mainWindow.pointInfos[i].value / maxValue) * actualHeightCanvas);
+                }
+
                 line.StrokeThickness = 2;
+
                 mainWindow.pointInfos[i].line = line;
+
                 _canvas.Children.Add(line);
             }
         }
 
         public void CreatePoint()
         {
+            int count = mainWindow.pointInfos.Count;
+            if (count < 2) return;
+
             Line line = new Line();
-            line.X1 = (mainWindow.pointInfos.Count - 1) * 20;
-            line.X2 = mainWindow.pointInfos.Count * 20;
-            line.Y1 = actualHeightCanvas - ((mainWindow.pointInfos[(mainWindow.pointInfos.Count - 2)].value / maxValue) * actualHeightCanvas);
-            line.Y2 = actualHeightCanvas - ((mainWindow.pointInfos[(mainWindow.pointInfos.Count - 1)].value / maxValue) * actualHeightCanvas);
+
+            int prevIndex = count - 2;
+            int currIndex = count - 1;
+
+            line.X1 = prevIndex * 20;
+            line.X2 = currIndex * 20;
+
+            line.Y1 = actualHeightCanvas - ((mainWindow.pointInfos[prevIndex].value / maxValue) * actualHeightCanvas);
+            line.Y2 = actualHeightCanvas - ((mainWindow.pointInfos[currIndex].value / maxValue) * actualHeightCanvas);
+
             line.StrokeThickness = 2;
-            mainWindow.pointInfos[mainWindow.pointInfos.Count - 1].line = line;
+
+            mainWindow.pointInfos[currIndex].line = line;
             _canvas.Children.Add(line);
         }
 
         public void ControlCreateChart()
         {
-            double value = mainWindow.pointInfos[mainWindow.pointInfos.Count - 1].value;
-            if (value < maxValue)
-                CreatePoint();
-            else
+            double currentValue = mainWindow.pointInfos[mainWindow.pointInfos.Count - 1].value;
+
+            if (currentValue > maxValue)
+            {
                 CreateChart();
+            }
+            else
+            {
+                CreatePoint();
+            }
+
             ColorChart();
         }
 
         public void ColorChart()
         {
-            double value = mainWindow.pointInfos[mainWindow.pointInfos.Count-1].value;
+            double currentValue = mainWindow.pointInfos[mainWindow.pointInfos.Count - 1].value;
+
+            averageValue = mainWindow.pointInfos.Average(p => p.value);
+
             for (int i = 0; i < mainWindow.pointInfos.Count; i++)
             {
-                if (value < averageValue)
+                var point = mainWindow.pointInfos[i];
+                if (point.line != null)
                 {
-                    mainWindow.pointInfos[i].line.Stroke = Brushes.Red;
+                    if (point.value < averageValue)
+                    {
+                        point.line.Stroke = Brushes.Red;
+                    }
+                    else
+                    {
+                        point.line.Stroke = Brushes.Green;
+                    }
                 }
-                else
-                    mainWindow.pointInfos[i].line.Stroke = Brushes.Green;
             }
+            _canvas.Width = mainWindow.pointInfos.Count * 20 + 50;
 
-            _canvas.Width = mainWindow.pointInfos.Count * 20 + 300;
             _scroll.ScrollToHorizontalOffset(_canvas.Width);
-            current_value.Content = "Тек. знач: " + Math.Round(value, 2);
-            average_value.Content = "Сред. знач: " + Math.Round(averageValue, 2);
+
+            if (current_value != null)
+                current_value.Content = "Тек. знач: " + Math.Round(currentValue, 2);
+
+            if (average_value != null)
+                average_value.Content = "Сред. знач: " + Math.Round(averageValue, 2);
         }
 
         public void Page_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            actualHeightCanvas = mainWindow.Height - 50d;
+            actualHeightCanvas = this.ActualHeight - 50d;
             CreateChart();
             ColorChart();
         }
