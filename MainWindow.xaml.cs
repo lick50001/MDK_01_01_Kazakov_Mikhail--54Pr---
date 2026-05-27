@@ -20,6 +20,7 @@ namespace Perm_Dynamics
     /// </summary>
     public partial class MainWindow : Window
     {
+        public static MainWindow mainWindow;
         public List<Classes.PointInfo> pointInfos = new List<Classes.PointInfo>();
         public MainWindow()
         {

@@ -20,7 +20,7 @@ namespace Perm_Dynamics.Pages
     /// </summary>
     public partial class Main : Page
     {
-        public MainWindow mainWindow;
+        private MainWindow mainWindow;
         public Main()
         {
             InitializeComponent();
