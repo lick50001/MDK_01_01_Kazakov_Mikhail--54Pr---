@@ -13,17 +13,24 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace Perm_Dynamics
+namespace Perm_Dynamics.Pages
 {
     /// <summary>
-    /// Логика взаимодействия для MainWindow.xaml
+    /// Логика взаимодействия для Main.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class Main : Page
     {
-        public List<Classes.PointInfo> pointInfos = new List<Classes.PointInfo>();
-        public MainWindow()
+        public MainWindow mainWindow;
+        public Main()
         {
             InitializeComponent();
+        }
+
+        public void OpenPageChart(object sender, RoutedEventArgs e)
+        {
+            float value = Convert.ToInt32(tb_value.Text);
+            mainWindow.pointsInfo.Add(new Classes.PointInfo(value));
+            mainWindow.OpenPages(MainWindow.pages.chart);
         }
     }
 }
